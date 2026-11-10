@@ -30,16 +30,20 @@ def list_books_json():
 # Route to create a new book
 @books.route('/create', methods=['POST', 'GET'])
 def create_book():
-    data = request.get_json()
-
-    new_book = Book(name=data['name'], author=data['author'], year_published=data['year_published'], book_type=data['book_type'])
-
     try:
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            raise ValueError('Invalid request data')
+        new_book = Book(name=data['name'], author=data['author'], year_published=data['year_published'], book_type=data['book_type'])
+
         # Add the new book to the session and commit to save to the database
         db.session.add(new_book)
         db.session.commit()
         print('Book added successfully')
         return redirect(url_for('books.list_books'))
+    except (KeyError, TypeError, ValueError) as e:
+        db.session.rollback()
+        return jsonify({'error': str(e) or 'Invalid form data'}), 400
     except Exception as e:
         # Handle any exceptions, such as database errors
         db.session.rollback()
@@ -72,6 +76,9 @@ def edit_book(book_id):
         db.session.commit()
         print('Book edited successfully')
         return jsonify({'message': 'Book updated successfully'})
+    except (KeyError, TypeError, ValueError) as e:
+        db.session.rollback()
+        return jsonify({'error': str(e) or 'Invalid form data'}), 400
     except Exception as e:
         # Handle any exceptions
         db.session.rollback()

@@ -30,19 +30,20 @@ def list_customers_json():
 def create_customer():
     data = request.form
 
-    # Validate the form data
-    if 'name' not in data or 'city' not in data or 'age' not in data:
-        print('Invalid form data')
-        return jsonify({'error': 'Invalid form data'}), 400
-
-    new_customer = Customer(name=data['name'], city=data['city'], age=data['age'])
-
     try:
+        # Validate the form data and model fields
+        if 'name' not in data or 'city' not in data or 'age' not in data:
+            raise ValueError('Invalid form data')
+        new_customer = Customer(name=data['name'], city=data['city'], age=data['age'])
+
         # Add the new customer to the session and commit to save to the database
         db.session.add(new_customer)
         db.session.commit()
         print('Customer added succesfully')
         return redirect(url_for('customers.list_customers'))
+    except (KeyError, TypeError, ValueError) as e:
+        db.session.rollback()
+        return jsonify({'error': str(e) or 'Invalid form data'}), 400
     except Exception as e:
         # Handle any exceptions, such as database errors
         db.session.rollback()
@@ -93,6 +94,9 @@ def edit_customer(customer_id):
         db.session.commit()
         print('Customer updated succesfully')
         return redirect(url_for('customers.list_customers'))
+    except (KeyError, TypeError, ValueError) as e:
+        db.session.rollback()
+        return jsonify({'error': str(e) or 'Invalid form data'}), 400
     except Exception as e:
         # Handle any exceptions
         db.session.rollback()
